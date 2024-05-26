@@ -9,11 +9,14 @@ import datetime
 import base64
 import hashlib
 # Need to install pycryptodome package
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
+#from Crypto.Cipher import AES
+#from Crypto.Util.Padding import unpad
 # For pretty print
-from pprint import pp
-
+#from pprint import pp
+import yahoo_fin.stock_info as si
+import Mytool.MyDataCon as mydatacon
+import openpyxl as pxl
+import xlwings as xw
 
 try:
     from requests_html import HTMLSession
@@ -299,6 +302,7 @@ def get_quote_table(ticker , dict_result = True, headers = {'User-agent': 'Mozil
     '''
 
     site = "https://finance.yahoo.com/quote/" + ticker + "?p=" + ticker
+    #print(site)
     
     tables = pd.read_html(requests.get(site, headers=headers).text)
     
@@ -1124,3 +1128,39 @@ def get_company_officers(ticker):
     info_frame = pd.DataFrame.from_dict(json_info)
     info_frame = info_frame.set_index("name")
     return info_frame
+
+def fill_up_formula(ws,latest_row,col,cur_row):
+    col_cur_row=col+str(cur_row)
+    formula = ws.range(col_cur_row).formula
+    formula_range=col_cur_row+':'+col+str(latest_row)
+    ws.range(formula_range).formula = formula
+
+tsla=si.get_data(ticker="tsla",start_date='2022-05-01')
+#print(tsla,type(tsla))
+#tsla.to_excel('/Users/treeson/Documents/Workbook1.xlsx',sheet_name='Sheet1',startrow=1,startcol=3)
+#excel_book = pd.read_excel('/Users/treeson/Documents/Workbook1.xlsx')
+app = xw.App(visible=False)
+wb = xw.Book('/Users/treeson/Documents/Template1.xlsx')
+
+#sheet 'FDX'
+ws = wb.sheets['StockInfo']
+#Update workbook at specified range
+ws.range("A1").options(index=True).value = tsla
+exit()
+rowa=ws.range('A1').end('down').row
+col_list=['I','J','K','L','M','N','O','P','Q','R','S','T','U','W','X','Y']
+for x in col_list:
+    start_row=x+'1'
+    latest_row=ws.range(start_row).end('down').row
+    fill_up_formula(ws, rowa, x, latest_row)
+
+#sheet Charts
+#ws_chart=wb.sheets['Charts']
+#ws_chart['B26'].value='{=N(OFFSET(FDX!$Y$265,MATCH(LARGE(ABS(FDX!$Y$265:FDX!$Y$495),A28),ABS(FDX!$Y$265:FDX!$Y$495),0)-1,))}'
+
+#=N(OFFSET(FDX!$Y$265,MATCH(LARGE(ABS(FDX!$Y$265:FDX!$Y$495),A26),ABS(FDX!$Y$265:FDX!$Y$495),0)-1,))
+#=N(OFFSET(FDX!$Y$265,MATCH(LARGE(ABS(FDX!$Y$265:FDX!$Y$495),A26),ABS(FDX!$Y$265:FDX!$Y$495),0)-1,))
+wb.save()
+wb.close()
+app.quit()
+#mydatacon.convert_dataframe_to_csv(aapl,'/Users/treeson/Documents/aapl.csv')

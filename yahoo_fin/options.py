@@ -3,12 +3,16 @@
 import pandas as pd
 import numpy as np
 import requests
+from pathlib import Path
 
 try:
     from requests_html import HTMLSession
 except Exception:
     pass
 
+#setting
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows',None)
 
 def force_float(elt):
     
@@ -25,6 +29,7 @@ def build_options_url(ticker, date = None):
 
     if date is not None:
         url = url + "&date=" + str(int(pd.Timestamp(date).timestamp()))
+    print(url)
 
     return url
 
@@ -38,15 +43,23 @@ def get_options_chain(ticker, date = None, raw = True, headers = {'User-agent': 
        @param: date"""    
     
     site = build_options_url(ticker, date)
-    
+    print('get_options_chain url: ',site)
     tables = pd.read_html(requests.get(site, headers=headers).text)
-    
+    #print('table: ', tables)
+    #print(tables[0],type(tables))
     if len(tables) == 1:
         calls = tables[0].copy()
-        puts = pd.DataFrame(columns = calls.columns)
+        #puts = pd.DataFrame(columns = calls.columns)
+        puts = pd.DataFrame()
     else:
         calls = tables[0].copy()
         puts = tables[1].copy()
+        #print(tables,type(tables))
+
+    #filepath = Path('/Users/treeson/Documents/out.csv')
+    #filepath.parent.mkdir(parents=True, exist_ok=True)
+    #print('path: ', filepath)
+    #puts.to_csv(filepath)
     
     if not raw:
         calls["% Change"] = calls["% Change"].str.strip("%").map(force_float)
@@ -114,11 +127,17 @@ def get_expiration_dates(ticker):
     return dates
     
 
+def get_closest_price_options_contract(ticker,date,current_price): #Sample: "TSLA","17/05/24"
+    option=get_options_chain(ticker,date)
+    calls=option.get('calls') #return pandas.core.frame.DataFrame
+    #print(calls,type(calls))
+    df_closest = calls.iloc[(calls['Strike']-current_price).abs().argsort()[:1]]
+    #print(df_closest,type(df_closest))
+    return df_closest #return pandas.core.frame.DataFrame
+    
 
-
-    
-    
-    
+#get_closest_price_options_contract("TSLA","17/05/24",156)
+#Nj_AXW4mECWd7KaCrHfQ
     
     
     
